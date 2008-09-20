@@ -1,0 +1,133 @@
+
+Ships themselves:
+- class
+- name
+- heading
+- guns
+- total hull (unnecessary? 10xClass)
+- total rigging (unnecessary? 5xClass)
+- current hull hits remaining
+- current rigging hits remaining
+
+
+
+- crew?
+- captain?
+
+
+
+CONVERSION FROM LEGO
+- maximum crew: limited in Lego only by the maximum number of models that can be piled on the ship. we should probably limit it.
+
+
+- or do we just go real-time, instead of following the movement orders system and such? that seems somewhat more attractive, though it requires a more complex change to the system.
+
+
+
+I say we turn it loose:
+- real-time
+  - pausing?
+- 360-degree courses with smooth (but nonlinear) wind power curves
+- 360-degree winds, minor shifts by the second, major shifts over time
+  - minutes? tens of minutes? how fast-paced is this game?
+- speed can be controlled by ordering:
+  - full sail -- best possible speed
+  - 3/4 sail
+  - 1/2 sail
+  - 1/4 sail
+  - steerage -- enough forward motion to hold course.
+  - furled -- sail-less, ship gradually rotates into the wind
+    - also drifts with the wind.
+- cannons
+  - mounted port, starboard, fore and aft.
+  - various weights?
+  - how much rotation do we give broadside guns?
+    - lower-deck guns very little, upper deck somewhat more?
+  - cannonball flight -- realistic speeds?
+  - do we track ammunition? (powder and balls)
+- crew
+  - boarding actions? maybe simulated only. hard to interact with that.
+  - alloting crewman is a key part of captaincy.
+    - repair teams
+    - firing guns
+    - manning the sails
+      - base amount required to make each speed
+      - some fraction more (20%?) required temporarily to change sail setting
+    - conning the ship -- small fixed amount, required for anything but furled sails
+    - lookouts -- limited, purchasable number of spyglasses?
+      - more lookouts increases chance of spotting distant ships.
+      - within a certain range ships are obviously visible even with no lookouts.
+
+- navigation
+  - simply at-sea combat needn't worry much about this
+  - adding distance sailing, ports, etc., or even just an island to hide behind, would require more navigational information.
+
+
+- interface
+  - textual initially. a GUI (or web/AJAX?) interface is possible later.
+
+- multiplayer
+  - a must-have, not least because I don't want to write an AI for a combat system this complex.
+  - player vs. player, co-op, whatever scenario we can devise. with no AIs, a scenario is basically the ships, their positions and loadouts. the players control the rest.
+
+- AI
+  - obviously writable, see Sid Meier's Pirates, Dangerous Waters
+  - but it's a big task, and far down the list of priorities.
+
+
+IMPLEMENTATION
+
+The sequence of feature implementation I imagine is as follows:
+- basic data structures
+- multiplayer infrastructure 
+  - dumb clients... perhaps even just telnet itself? the cheap start anyway.
+- sailing back-end
+- sailing front-end
+- firing guns back-end
+- firing guns front-end
+- damage system -- guns won't do anything at first :P
+- crew control interface
+
+
+
+INTERFACE
+- mostly MUD-like: "fire stbd" "reload stbd" "prepare port" "fire port"
+- sailing: "port to 340" "right by 30"
+- can give sail settings evocative names:
+  - "sails full"
+  - "sails drawn"
+  - "sails half"
+  - "sails light"
+  - "steerage"
+  - "sails furled"
+- server-side responses to the ordering player can be authentic-sounding crew reports:
+  - "turn aport to 340, aye!"
+- other players with lookouts' eyes on an opponent see some reports from the lookouts
+  - "Cap'n, the Amber Mary be turnin' to port!"
+  - "The Amber Mary is making full sails."
+  - "INCOMING TO PORT!" for coming shots. what's a pirately word for "incoming"?
+
+
+REALISM
+- biggest factors are as in DW:
+  - time scale
+    - weapon reload times
+    - shot flight times
+    - time to make or furl sails
+    - turn rates
+    - travel speeds
+  - spotting distances
+    - more or less detailed (or accurate?) reports of enemy activity at different ranges
+    - maximum distance to horizon, spotting chance growing with decreasing range
+    - once a ship has been sighted, as long as one crewman per opponent remains on lookout duty, it won't be lost until she dips fully behind the horizon.
+    - only lookouts not dedicated to following a particular vessel are searching.
+      - no searcher means no spotting until she reaches the very small range that makes her obvious to everyone aboard.
+  - communication
+    - how fast and how frequently can friendly and opposing captains communicate?
+    - when was semaphore and signaling lights invented? could they send arbitrary text?
+    - or was it just a small language of signals via flags/lights?
+
+  - night vs. day? not many pirate battles were fought at night, too hard to see other vessels, wind too calm. assuming always day for now seems reasonable.
+  - wind direction and strength, and their functions with time.
+
+
