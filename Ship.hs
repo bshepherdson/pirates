@@ -20,6 +20,9 @@ type Sails = M.Map String SailFunc
 -- just a name, for now.
 type Captain = String
 
+-- a turn rate factor
+type Rudder = Int
+
 data Ship = Ship {
       shipClass    :: !Class
     , name         :: !String
@@ -27,6 +30,7 @@ data Ship = Ship {
     , course       :: !Heading
     , sails        :: !Sails
     , sail         :: !SailFunc
+    , rudder       :: !Rudder
     }
 
 
@@ -41,7 +45,10 @@ tpFrigate = Ship {
             , course    = 0
             , sails     = ssFrigate
             , sail      = furled
+            , rudder    = 0
             }
+
+
 
 
 ssFrigate :: Sails
