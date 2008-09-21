@@ -23,7 +23,9 @@ import Control.Concurrent.STM.TChan
 
 import Data.List
 import Data.Char
+import Data.Maybe
 
+import Base
 import Ship
 
 
@@ -53,6 +55,17 @@ newtype P a = P (StateT PState IO a)
     deriving (Functor, Monad, MonadIO, MonadState PState)
 
 
+newtype Parse a = Parse (ErrorT String P a)
+    deriving (Functor, Monad, MonadState PState, MonadIO)
+
+runParse (Parse x) = runErrorT x
+
+type Command = ClientId -> [String] -> Parse ()
+
+--data Parse a = Unknown | One a | Ambig [a]
+
+
+io :: (MonadIO m) => IO a -> m a
 io = liftIO
 
 
@@ -119,6 +132,9 @@ updateClient :: ClientId -> (Client -> Client) -> P ()
 updateClient c f = modify (\st -> st { clients = updateMatching ((==c).cid) f (clients st) })
 
 
+withShip :: ClientId -> (Ship -> Ship) -> P ()
+withShip cid f = updateClient cid (\c -> c { ship = f (ship c) })
+
 
 maybeRead :: (Read a) => String -> Maybe a
 maybeRead s = case reads s of
@@ -127,16 +143,71 @@ maybeRead s = case reads s of
 
 
 
+namesMatch :: (String -> Bool) -> Poss a -> Poss a
+namesMatch p = filter (not . null . snd) . map (second (filter p))
 
+
+tryParse :: String -> Poss a -> Parse a
+tryParse s cs = case namesMatch (s `isPrefixOf`) cs of
+                  [(a,_)] -> return a
+                  []      -> fail $ "Unknown term \"" ++ s ++ "\""
+                  xs      -> fail $ "Ambiguous abbreviation. Did you mean: "
+                             ++ (unwords . concat . map snd) xs
+
+
+maybeParse :: String -> Poss a -> Maybe a
+maybeParse s ps = case namesMatch (s `isPrefixOf`) ps of
+                    [(a,_)] -> Just a
+                    _       -> Nothing
+                  
+
+-- returns the /last/ Just value, or Nothing.
+collapseMaybes :: [Maybe a] -> Maybe a
+collapseMaybes = listToMaybe . reverse . catMaybes
 
 -----------------------------------------
 -------------   commands    -------------
 -----------------------------------------
 
-parser = undefined
+commands :: Poss Command
+commands = [(cmd_turn     , ["turn","come"])
+           ,(cmd_rudder   , ["rudder"])
+           ]
 
 
+parser :: (ClientId,String) -> P ()
+parser (c,[]) = return ()  -- do nothing on empty string
+parser (c,s)  = case words (map toLower s) of
+                  []     -> return () -- do nothing again
+                  (w:ws) -> do
+                    x <- runParse (tryParse w commands >>= \f -> f c (w:ws))
+                    case x of
+                      Left e  -> to c $ "Error: " ++ e
+                      Right _ -> return ()
 
+
+parseArg :: a -> Poss a -> [String] -> a
+parseArg d p xs = maybe d id $ collapseMaybes $ map (flip maybeParse p) xs
+
+cmd_turn :: Command
+cmd_turn c (cmd:as) = do
+  let dir   = parseArg 0 dirs  as
+      rate  = parseArg 0 rates as
+      hdg   = maybe 0 id $ collapseMaybes $ (map maybeRead as :: [Maybe Int])
+      absol = parseArg (cmd=="turn") absls as
+  turn c dir rate hdg absol
+    where dirs  = [(   -1, ["left","port","aport"])
+                  ,(    1, ["right","starboard","stbd","astarboard","astbd"])]
+          rates = [(    1, ["soft","gentle","softly","gently","slow","slowly"])
+                  ,(    3, ["hard","fast","quick","quickly"])]
+          absls = [(True , ["to"])
+                  ,(False, ["by"])]
+
+turn :: ClientId -> Int -> Rudder -> Int -> Bool -> Parse ()
+turn c d r h a = io $ print (c,d,r,h,a)
+
+
+cmd_rudder = undefined
 
 
 ------------------------------------------------

@@ -5,6 +5,7 @@ module Ship where
 import qualified Data.Map as M
 import Control.Arrow
 
+import Base
 
 type Class   = Int
 type Heading = Int
@@ -15,13 +16,15 @@ type Speed   = Int -- measured in yards per tick
 type SailFunc = Heading -> Speed -> Heading -> (Heading, Speed)
 
 -- maps user sail setting commands to functions that embody them for this ship
-type Sails = M.Map String SailFunc
+type Sails = Poss SailFunc
 
 -- just a name, for now.
 type Captain = String
 
 -- a turn rate factor
 type Rudder = Int
+
+data TurnRate = Slow | Normal | Hard
 
 data Ship = Ship {
       shipClass    :: !Class
@@ -52,13 +55,12 @@ tpFrigate = Ship {
 
 
 ssFrigate :: Sails
-ssFrigate = M.fromList [
-             ("full"    , sLargeFastSquare)
-            ,("drawn"   , sq3 sLargeFastSquare)
-            ,("half"    , sq2 sLargeFastSquare)
-            ,("light"   , sq1 sLargeFastSquare)
-            ,("steerage", steerage)
-            ,("furled"  , furled)
+ssFrigate = [(sLargeFastSquare    , ["full"])
+            ,(sq3 sLargeFastSquare, ["drawn"])
+            ,(sq2 sLargeFastSquare, ["half"])
+            ,(sq1 sLargeFastSquare, ["light"])
+            ,(steerage            , ["steerage"])
+            ,(furled              , ["furled"])
             ]
 
 
