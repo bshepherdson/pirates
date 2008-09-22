@@ -37,6 +37,7 @@ data Event = Message (ClientId,String)
            | Disconnect ClientId
            | NewReader ClientId ThreadId
 
+
 data Client = Client {
       cid        :: !ClientId
     , socket     :: !Handle
@@ -56,18 +57,18 @@ newtype P a = P (StateT PState IO a)
 
 
 newtype Parse a = Parse (ErrorT String P a)
-    deriving (Functor, Monad, MonadState PState, MonadIO)
+    deriving (Functor, Monad, MonadIO, MonadState PState)
 
 runParse (Parse x) = runErrorT x
 
 type Command = ClientId -> [String] -> Parse ()
 
---data Parse a = Unknown | One a | Ambig [a]
-
 
 io :: (MonadIO m) => IO a -> m a
 io = liftIO
 
+liftP :: P a -> Parse a
+liftP = Parse . lift
 
 readerThread :: ClientId -> Handle -> MasterChannel -> IO ()
 readerThread c h chan = forever $ do
@@ -189,25 +190,38 @@ parser (c,s)  = case words (map toLower s) of
 parseArg :: a -> Poss a -> [String] -> a
 parseArg d p xs = maybe d id $ collapseMaybes $ map (flip maybeParse p) xs
 
+
+dirs  = [(   -1, ["left","port","aport"])
+        ,(    1, ["right","starboard","stbd","astarboard","astbd"])]
+
+rates = [(    1, ["soft","gentle","softly","gently","slow","slowly","light","slight"])
+        ,(    3, ["hard","fast","quick","quickly"])]
+          
+
 cmd_turn :: Command
-cmd_turn c (cmd:as) = do
-  let dir   = parseArg 0 dirs  as
-      rate  = parseArg 0 rates as
-      hdg   = maybe 0 id $ collapseMaybes $ (map maybeRead as :: [Maybe Int])
-      absol = parseArg (cmd=="turn") absls as
-  turn c dir rate hdg absol
-    where dirs  = [(   -1, ["left","port","aport"])
-                  ,(    1, ["right","starboard","stbd","astarboard","astbd"])]
-          rates = [(    1, ["soft","gentle","softly","gently","slow","slowly"])
-                  ,(    3, ["hard","fast","quick","quickly"])]
-          absls = [(True , ["to"])
-                  ,(False, ["by"])]
+cmd_turn c (cmd:as) = liftP $ turn c dir rate hdg absol
+    where absls = [(True , ["to"]), (False, ["by"])]
+          dir   = parseArg 0 dirs  as
+          rate  = parseArg 2 rates as
+          hdg   = maybe 0 id $ collapseMaybes $ (map maybeRead as :: [Maybe Int])
+          absol = parseArg (cmd=="turn") absls as
 
-turn :: ClientId -> Int -> Rudder -> Int -> Bool -> Parse ()
-turn c d r h a = io $ print (c,d,r,h,a)
+turn :: ClientId -> Int -> Rudder -> Int -> Bool -> P ()
+turn c d r h a = withShip c $ \s -> s { rudder  = d*r
+                                      , orCourse = if a 
+                                                   then Just h 
+                                                   else Just $ course s + h*d 
+                                      }
 
 
-cmd_rudder = undefined
+cmd_rudder :: Command
+cmd_rudder c (cmd:as) = do
+  liftP $ withShip c $ \s -> s { rudder = r, orCourse = Nothing }
+  liftP $ to c $ "Rudder " ++ rudderReport r ++", aye Cap'n"
+    where dir  = parseArg 0 dirs  as
+          rate = parseArg 2 rates as
+          r    = dir*rate
+
 
 
 ------------------------------------------------
@@ -267,6 +281,7 @@ serverLoop chan s tid c = do
                                             , chan   = nc
                                             , reader = tid
                                             , writer = wid
+                                            , ship   = tpFrigate
                                             })
   rid <- forkIO $ readerThread c h chan
   atomically $ writeTChan chan (NewReader c rid)

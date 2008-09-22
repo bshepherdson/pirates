@@ -25,17 +25,18 @@ type Captain = String
 type Rudder = Int
 
 data TurnRate = Slow | Normal | Hard
+  deriving (Read, Show)
 
 data Ship = Ship {
       shipClass    :: !Class
     , name         :: !String
     , captain      :: !Captain
     , course       :: !Heading
+    , orCourse     :: !(Maybe Heading)
     , sails        :: !Sails
     , sail         :: !SailFunc
     , rudder       :: !Rudder
     }
-
 
 
 -- a starting ship
@@ -46,6 +47,7 @@ tpFrigate = Ship {
             , name      = "Black Utopia"
             , captain   = "Myron Scrant"
             , course    = 0
+            , orCourse  = Nothing
             , sails     = ssFrigate
             , sail      = furled
             , rudder    = 0
@@ -92,6 +94,28 @@ steerage _ _ sh = (sh, 1)
 furled :: SailFunc
 furled wh ws sh | windDiff wh sh == 90  = (sh,0)
                 | otherwise             = (sh + signum (wh-sh), 0)
+
+
+
+
+
+
+
+
+-----------------------------
+----- report functions ------
+-----------------------------
+
+rudderReport :: Rudder -> String
+rudderReport 0    = "amidships"
+rudderReport 1    = "slow to starboard"
+rudderReport 2    = "astarboard"
+rudderReport 3    = "hard astarboard"
+rudderReport (-1) = "slow to port"
+rudderReport (-2) = "aport"
+rudderReport (-3) = "hard aport"
+
+
 
 
 
