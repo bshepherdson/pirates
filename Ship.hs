@@ -116,7 +116,10 @@ rudderReport (-2) = "aport"
 rudderReport (-3) = "hard aport"
 
 
-
+turnReport :: Ship -> String
+turnReport (Ship { rudder=r, orCourse=(Just c) }) = 
+    "Turn " ++ rudderReport r ++ " to " ++ show c ++ ", aye."
+turnReport (Ship { rudder=r}) = "Rudder " ++ rudderReport r ++ ", aye."
 
 
 

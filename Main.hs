@@ -199,7 +199,10 @@ rates = [(    1, ["soft","gentle","softly","gently","slow","slowly","light","sli
           
 
 cmd_turn :: Command
-cmd_turn c (cmd:as) = liftP $ turn c dir rate hdg absol
+cmd_turn c (cmd:as) = do
+  liftP $ turn c dir rate hdg absol
+  s <- ship <$> liftP (findClient c)
+  liftP $ to c $ turnReport s
     where absls = [(True , ["to"]), (False, ["by"])]
           dir   = parseArg 0 dirs  as
           rate  = parseArg 2 rates as
