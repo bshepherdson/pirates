@@ -29,33 +29,6 @@ import Base
 import Ship
 
 
-type ClientId = Int
-type MasterChannel = TChan Event
-
-data Event = Message (ClientId,String)
-           | NewClient Client
-           | Disconnect ClientId
-           | NewReader ClientId ThreadId
-
-
-data Client = Client {
-      cid        :: !ClientId
-    , socket     :: !Handle
-    , chan       :: TChan String
-    , reader     :: !ThreadId
-    , writer     :: !ThreadId
-    , ship       :: Ship
-    }
-
-
-data PState = PState { clients  :: [Client]
-                     , inChan   :: MasterChannel
-                     }
-
-newtype P a = P (StateT PState IO a)
-    deriving (Functor, Monad, MonadIO, MonadState PState)
-
-
 newtype Parse a = Parse (ErrorT String P a)
     deriving (Functor, Monad, MonadIO, MonadState PState)
 
@@ -235,6 +208,20 @@ cmd_rudder c (cmd:as) = do
 runP :: PState -> P a -> IO (a, PState)
 runP st (P a) = runStateT a st
 
+
+tick :: Int -> P ()
+tick x = do
+    -- advance all ships by the right amount of movement
+    cs <- gets clients
+    (ws,wh) <- gets wind
+    cs' <- mapM (\c -> tickShip ws wh (ship c) >>= \s -> c { ship = s }) cs
+    tickWind
+
+tickWind :: P ()
+tickWind = return ()   -- to be defined
+  
+
+
 loop :: MasterChannel -> P ()
 loop chan = forever $ do
               e <- io $ atomically $ readTChan chan
@@ -258,7 +245,7 @@ loop chan = forever $ do
                                   put st { clients = pre ++ post }
                                   toAll $ "System: Client Disconnected: " ++ show (cid d)
                 NewReader c t -> updateClient c $ \c -> c { reader = t }
-
+                Tick x -> tick x
 
 
 main = do
@@ -268,8 +255,16 @@ main = do
               chan <- atomically newTChan
               tid  <- forkIO $ runP (PState [] chan) (loop chan) >> return ()
               sock <- listenOn (PortNumber (fromIntegral ((read port)::Int)))
+              tickt<- forkIO $ tickerThread 0 chan
               serverLoop chan sock tid 0
     [] -> putStrLn "Usage: pirateserver <port>"
+
+
+tickerThread :: Int -> MasterChannel -> IO ()
+tickerThread !x chan = do
+  atomically $ writeTChan (Tick x)
+  threadDelay 1000000
+  tickerThread (x+1) chan
 
 
 serverLoop :: MasterChannel -> Socket -> ThreadId -> ClientId -> IO ()

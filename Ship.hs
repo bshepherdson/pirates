@@ -8,8 +8,11 @@ import Control.Arrow
 import Base
 
 type Class   = Int
-type Heading = Int
-type Speed   = Int -- measured in yards per tick
+type Heading = Double
+type Speed   = Double -- measured in yards per minute
+
+-- 10 6-second ticks to a minute, a minute being the unit of Heading change, and Speed
+tickRate = 10
 
 -- transforms wind heading and speed, given ships' heading, 
 -- into a new heading and speed for the ship at the specified sail setting
@@ -36,6 +39,9 @@ data Ship = Ship {
     , sails        :: !Sails
     , sail         :: !SailFunc
     , rudder       :: !Rudder
+    , sx           :: !Double
+    , sy           :: !Double
+    , turnRate     :: !Double
     }
 
 
@@ -97,10 +103,25 @@ furled wh ws sh | windDiff wh sh == 90  = (sh,0)
 
 
 
+-----------------------------------
+-------- sailing functions --------
+-----------------------------------
 
+tickShip :: Speed -> Heading -> ClientId -> Ship -> P Ship
+tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = dc }) = do
+  let nc  = c + (r * dc / tickRate)
+      oc' = maybe c id oc 
+      overshoot = compare c oc' /= compare nc oc'
+  when overshoot $ to c ("Steady on course " ++ roundShow nc ++ ", Cap'n")
+  let s'  = if overshoot then s { course = nc } else s { course = oc', orCourse = Nothing, rudder = 0 }
+      s'' = moveShip ws wh s'
+  return s''
 
-
-
+moveShip :: Speed -> Heading -> Ship -> Ship
+moveShip ws wh s@(Ship { sail = f, course = c, sx = x, sy = y }) = s { course = c', sx = x', sy = y' }
+    where (c',ss) = f ws wh c  -- apply the sailing function
+          x'      = x + ss * cos (comp2cart c')
+          y'      = y + ss * sin (comp2cart c')
 
 -----------------------------
 ----- report functions ------
@@ -121,7 +142,7 @@ turnReport (Ship { rudder=r, orCourse=(Just c) }) =
     "Turn " ++ rudderReport r ++ " to " ++ show c ++ ", aye."
 turnReport (Ship { rudder=r}) = "Rudder " ++ rudderReport r ++ ", aye."
 
-
+roundShow = show . round
 
 -----------------------------
 ----- utility functions  ----
@@ -147,4 +168,18 @@ q3 x = (x * 3) `div` 4
 q2 = (`div`2)
 q1 = (`div`4)
 
+-- converts compass headings into left-hand 3 o'clock radians
+comp2cart :: Heading -> Heading
+comp2cart h = toRadians $ normalize $ (360 - h) + 90
+
+cart2comp :: Heading -> Heading
+cart2comp h = normalize $ toDegrees $ 360 - (h - 90)
+
+toRadians,toDegrees :: (Floating a) => a -> a
+toRadians x = 2 * pi * (x / 360)
+toDegrees x = 360 * (x / (2*pi))
+
+normalize x | x >= 360  = normalize $ x - 360
+            | x <    0  = normalize $ x + 360
+            | otherwise = x
 
