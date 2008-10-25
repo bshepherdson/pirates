@@ -4,45 +4,9 @@ module Ship where
 
 import qualified Data.Map as M
 import Control.Arrow
+import Control.Monad
 
 import Base
-
-type Class   = Int
-type Heading = Double
-type Speed   = Double -- measured in yards per minute
-
--- 10 6-second ticks to a minute, a minute being the unit of Heading change, and Speed
-tickRate = 10
-
--- transforms wind heading and speed, given ships' heading, 
--- into a new heading and speed for the ship at the specified sail setting
-type SailFunc = Heading -> Speed -> Heading -> (Heading, Speed)
-
--- maps user sail setting commands to functions that embody them for this ship
-type Sails = Poss SailFunc
-
--- just a name, for now.
-type Captain = String
-
--- a turn rate factor
-type Rudder = Int
-
-data TurnRate = Slow | Normal | Hard
-  deriving (Read, Show)
-
-data Ship = Ship {
-      shipClass    :: !Class
-    , name         :: !String
-    , captain      :: !Captain
-    , course       :: !Heading
-    , orCourse     :: !(Maybe Heading)
-    , sails        :: !Sails
-    , sail         :: !SailFunc
-    , rudder       :: !Rudder
-    , sx           :: !Double
-    , sy           :: !Double
-    , turnRate     :: !Double
-    }
 
 
 -- a starting ship
@@ -57,6 +21,9 @@ tpFrigate = Ship {
             , sails     = ssFrigate
             , sail      = furled
             , rudder    = 0
+            , sx        = 0
+            , sy        = 0
+            , turnRate  = 0
             }
 
 
@@ -109,10 +76,10 @@ furled wh ws sh | windDiff wh sh == 90  = (sh,0)
 
 tickShip :: Speed -> Heading -> ClientId -> Ship -> P Ship
 tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = dc }) = do
-  let nc  = c + (r * dc / tickRate)
+  let nc  = c + (fi r * dc / fi tickRate)
       oc' = maybe c id oc 
       overshoot = compare c oc' /= compare nc oc'
-  when overshoot $ to c ("Steady on course " ++ roundShow nc ++ ", Cap'n")
+  when overshoot $ to cid ("Steady on course " ++ roundShow nc ++ ", Cap'n")
   let s'  = if overshoot then s { course = nc } else s { course = oc', orCourse = Nothing, rudder = 0 }
       s'' = moveShip ws wh s'
   return s''
@@ -135,6 +102,7 @@ rudderReport 3    = "hard astarboard"
 rudderReport (-1) = "slow to port"
 rudderReport (-2) = "aport"
 rudderReport (-3) = "hard aport"
+rudderReport _    = "ERROR: UNKNOWN"
 
 
 turnReport :: Ship -> String
@@ -164,9 +132,9 @@ sq1 f wh ws sh = second q1 $ f wh ws sh
 
 
 q3,q2,q1 :: Speed -> Speed
-q3 x = (x * 3) `div` 4
-q2 = (`div`2)
-q1 = (`div`4)
+q3 x = (x * 3) / 4
+q2 = (/2)
+q1 = (/4)
 
 -- converts compass headings into left-hand 3 o'clock radians
 comp2cart :: Heading -> Heading

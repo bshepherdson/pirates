@@ -87,6 +87,7 @@ The sequence of feature implementation I imagine is as follows:
 - firing guns front-end
 - damage system -- guns won't do anything at first :P
 - crew control interface
+- help system
 
 
 
@@ -106,6 +107,7 @@ INTERFACE
   - "Cap'n, the Amber Mary be turnin' to port!"
   - "The Amber Mary is making full sails."
   - "INCOMING TO PORT!" for coming shots. what's a pirately word for "incoming"?
+  - "help" for command list, "help <command>" for more detail
 
 
 REALISM

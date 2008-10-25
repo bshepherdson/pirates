@@ -29,20 +29,6 @@ import Base
 import Ship
 
 
-newtype Parse a = Parse (ErrorT String P a)
-    deriving (Functor, Monad, MonadIO, MonadState PState)
-
-runParse (Parse x) = runErrorT x
-
-type Command = ClientId -> [String] -> Parse ()
-
-
-io :: (MonadIO m) => IO a -> m a
-io = liftIO
-
-liftP :: P a -> Parse a
-liftP = Parse . lift
-
 readerThread :: ClientId -> Handle -> MasterChannel -> IO ()
 readerThread c h chan = forever $ do
                           catch (hGetLine h >>= \s ->
@@ -64,80 +50,6 @@ putDisconnect c chan = do
   atomically $ writeTChan chan (Disconnect c)
 
 
-
-
-------------------------------------------
-------- utility sending functions --------
-------------------------------------------
-
-send :: String -> Client -> P ()
-send s c = io $ atomically $ writeTChan (chan c) s
-
-to :: ClientId -> String -> P ()
-to c s = findClient c >>= send s
-
-toAll :: String -> P ()
-toAll s = gets clients >>= mapM_ (send s)
-
-toAllBut :: ClientId -> String -> P ()
-toAllBut c s = gets clients >>= mapM_ (send s) . filter ((/=c).cid)
-
-
-
---------------- helper functions ------------------------
-
-findClient :: ClientId -> P Client
-findClient c = do
-  cs <- gets clients
-  case find ((==c).cid) cs of
-    Nothing -> do
-      io $ putStrLn $ "The impossible just happened: ClientId " ++ show c ++ " does not exist."
-      io $ exitWith (ExitFailure 1)
-    Just c' -> return c'
-
-
-
--- warning: partial function
-updateMatching :: (a -> Bool) -> (a -> a) -> [a] -> [a]
-updateMatching p f xs = pre ++ f x' : xs'
-    where (pre, (x':xs')) = break p xs
-
-updateClient :: ClientId -> (Client -> Client) -> P ()
-updateClient c f = modify (\st -> st { clients = updateMatching ((==c).cid) f (clients st) })
-
-
-withShip :: ClientId -> (Ship -> Ship) -> P ()
-withShip cid f = updateClient cid (\c -> c { ship = f (ship c) })
-
-
-maybeRead :: (Read a) => String -> Maybe a
-maybeRead s = case reads s of
-                [(y,"")] -> Just y
-                _        -> Nothing
-
-
-
-namesMatch :: (String -> Bool) -> Poss a -> Poss a
-namesMatch p = filter (not . null . snd) . map (second (filter p))
-
-
-tryParse :: String -> Poss a -> Parse a
-tryParse s cs = case namesMatch (s `isPrefixOf`) cs of
-                  [(a,_)] -> return a
-                  []      -> fail $ "Unknown term \"" ++ s ++ "\""
-                  xs      -> fail $ "Ambiguous abbreviation. Did you mean: "
-                             ++ (unwords . concat . map snd) xs
-
-
-maybeParse :: String -> Poss a -> Maybe a
-maybeParse s ps = case namesMatch (s `isPrefixOf`) ps of
-                    [(a,_)] -> Just a
-                    _       -> Nothing
-                  
-
--- returns the /last/ Just value, or Nothing.
-collapseMaybes :: [Maybe a] -> Maybe a
-collapseMaybes = listToMaybe . reverse . catMaybes
 
 -----------------------------------------
 -------------   commands    -------------
@@ -185,8 +97,8 @@ cmd_turn c (cmd:as) = do
 turn :: ClientId -> Int -> Rudder -> Int -> Bool -> P ()
 turn c d r h a = withShip c $ \s -> s { rudder  = d*r
                                       , orCourse = if a 
-                                                   then Just h 
-                                                   else Just $ course s + h*d 
+                                                   then Just $ fi h 
+                                                   else Just $ course s + (fi $ h * d )
                                       }
 
 
@@ -214,11 +126,12 @@ tick x = do
     -- advance all ships by the right amount of movement
     cs <- gets clients
     (ws,wh) <- gets wind
-    cs' <- mapM (\c -> tickShip ws wh (ship c) >>= \s -> c { ship = s }) cs
+    cs' <- mapM (\c -> tickShip ws wh (cid c) (ship c) >>= \s -> return c { ship = s }) cs
     tickWind
+          
 
 tickWind :: P ()
-tickWind = return ()   -- to be defined
+tickWind = return ()   -- TODO: to be defined
   
 
 
@@ -253,7 +166,7 @@ main = do
   case args of
     (port:_) -> do
               chan <- atomically newTChan
-              tid  <- forkIO $ runP (PState [] chan) (loop chan) >> return ()
+              tid  <- forkIO $ runP (PState [] chan (0,0)) (loop chan) >> return ()
               sock <- listenOn (PortNumber (fromIntegral ((read port)::Int)))
               tickt<- forkIO $ tickerThread 0 chan
               serverLoop chan sock tid 0
@@ -262,7 +175,7 @@ main = do
 
 tickerThread :: Int -> MasterChannel -> IO ()
 tickerThread !x chan = do
-  atomically $ writeTChan (Tick x)
+  atomically $ writeTChan chan (Tick x)
   threadDelay 1000000
   tickerThread (x+1) chan
 
