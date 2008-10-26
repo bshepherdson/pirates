@@ -176,7 +176,7 @@ main = do
 tickerThread :: Int -> MasterChannel -> IO ()
 tickerThread !x chan = do
   atomically $ writeTChan chan (Tick x)
-  threadDelay 1000000
+  threadDelay $ (60 `div` fi tickRate) * 1000000
   tickerThread (x+1) chan
 
 
