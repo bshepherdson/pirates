@@ -23,7 +23,7 @@ tpFrigate = Ship {
             , rudder    = 0
             , sx        = 0
             , sy        = 0
-            , turnRate  = 0
+            , turnRate  = 30
             }
 
 
