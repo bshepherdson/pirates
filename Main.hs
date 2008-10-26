@@ -166,7 +166,7 @@ main = do
   case args of
     (port:_) -> do
               chan <- atomically newTChan
-              tid  <- forkIO $ runP (PState [] chan (0,0)) (loop chan) >> return ()
+              tid  <- forkIO $ runP (PState [] chan (10,0)) (loop chan) >> return ()
               sock <- listenOn (PortNumber (fromIntegral ((read port)::Int)))
               tickt<- forkIO $ tickerThread 0 chan
               serverLoop chan sock tid 0
