@@ -128,7 +128,6 @@ tick x = do
     (ws,wh) <- gets wind
     cs' <- mapM (\c -> tickShip ws wh (cid c) (ship c) >>= \s -> return c { ship = s }) cs
     tickWind
-          
 
 tickWind :: P ()
 tickWind = return ()   -- TODO: to be defined
