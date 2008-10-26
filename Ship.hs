@@ -123,6 +123,7 @@ windDiff wh sh = norm180 $ abs $ sh - wh
     where norm180 x | x >= 360 = norm180 $ x - 360
                     | x <  0   = norm180 $ x + 360
                     | x >  180 = 180 - (x - 180)     -- weird but correct
+                    | otherwise = x
 
 
 sq3,sq2,sq1 :: SailFunc -> SailFunc
