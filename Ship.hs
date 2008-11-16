@@ -78,9 +78,9 @@ tickShip :: Speed -> Heading -> ClientId -> Ship -> P Ship
 tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = dc }) = do
   let nc  = c + (fi r * dc / fi tickRate)
       oc' = maybe c id oc 
-      overshoot = compare c oc' /= compare nc oc'
-  when overshoot $ to cid ("Steady on course " ++ roundShow nc ++ ", Cap'n")
-  let s'  = if overshoot then s { course = nc } else s { course = oc', orCourse = Nothing, rudder = 0 }
+      overshoot = compare c oc' /= compare nc oc' || c == oc'
+  when overshoot $ to cid ("Steady on course " ++ roundShow oc' ++ ", Cap'n")
+  let s'  = if overshoot then s { course = oc', orCourse = Nothing, rudder = 0 } else s { course = nc }
       s'' = moveShip ws wh s'
   to cid $ showShip s''
   return s''
