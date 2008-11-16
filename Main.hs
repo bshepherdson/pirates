@@ -127,6 +127,7 @@ tick x = do
     cs <- gets clients
     (ws,wh) <- gets wind
     cs' <- mapM (\c -> tickShip ws wh (cid c) (ship c) >>= \s -> return c { ship = s }) cs
+    modify $ \s -> s { clients = cs' }
     tickWind
 
 tickWind :: P ()
