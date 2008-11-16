@@ -16,10 +16,10 @@ tpFrigate = Ship {
               shipClass = 5
             , name      = "Black Utopia"
             , captain   = "Myron Scrant"
-            , course    = 0
+            , course    = 120
             , orCourse  = Nothing
             , sails     = ssFrigate
-            , sail      = furled
+            , sail      = sLargeFastSquare
             , rudder    = 0
             , sx        = 0
             , sy        = 0
@@ -48,7 +48,7 @@ ssFrigate = [(sLargeFastSquare    , ["full"])
 -- 120-180 -> 1
 -- unlike SMP, ships here are limited to the wind speed.
 sLargeFastSquare :: SailFunc
-sLargeFastSquare wh ws sh | dh < 23   = (sh,0)
+sLargeFastSquare ws wh sh | dh < 23   = (sh,0)
                           | dh < 45   = (sh,q1 ws)
                           | dh < 90   = (sh,q2 ws)
                           | dh < 120  = (sh,q3 ws)
@@ -65,7 +65,7 @@ steerage _ _ sh = (sh, 1)
 
 -- moves one degree closer to the wind, either with or into it.
 furled :: SailFunc
-furled wh ws sh | windDiff wh sh == 90  = (sh,0)
+furled ws wh sh | windDiff wh sh == 90  = (sh,0)
                 | otherwise             = (sh + signum (wh-sh), 0)
 
 

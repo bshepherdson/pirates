@@ -76,7 +76,7 @@ tickRate = 10
 
 -- transforms wind heading and speed, given ships' heading, 
 -- into a new heading and speed for the ship at the specified sail setting
-type SailFunc = Heading -> Speed -> Heading -> (Heading, Speed)
+type SailFunc = Speed -> Heading -> Heading -> (Heading, Speed)
 
 -- maps user sail setting commands to functions that embody them for this ship
 type Sails = Poss SailFunc
