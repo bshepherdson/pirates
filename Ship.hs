@@ -77,8 +77,9 @@ furled ws wh sh | windDiff wh sh == 90  = (sh,0)
 tickShip :: Speed -> Heading -> ClientId -> Ship -> P Ship
 tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = dc }) = do
   let nc  = c + (fi r * dc / fi tickRate)
-      oc' = maybe c id oc 
-      overshoot = compare c oc' /= compare nc oc' || c == oc'
+      (overshoot,oc') = case oc of
+          Just x  -> (compare c x /= compare nc x || c == x, x)
+          Nothing -> (False, 0)
   when overshoot $ to cid ("Steady on course " ++ roundShow oc' ++ ", Cap'n")
   let s'  = if overshoot then s { course = oc', orCourse = Nothing, rudder = 0 } else s { course = nc }
       s'' = moveShip ws wh s'
