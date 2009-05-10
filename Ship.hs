@@ -82,7 +82,7 @@ tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = d
   when overshoot $ to cid ("Steady on course " ++ roundShow oc' ++ ", Cap'n")
   let s'  = if overshoot then s { course = oc', orCourse = Nothing, rudder = 0 } else s { course = nc }
       s'' = moveShip ws wh s'
-  to cid $ showShip s''
+  to cid $ showShip s'' ws wh
   return s''
 
 moveShip :: Speed -> Heading -> Ship -> Ship
@@ -114,8 +114,8 @@ turnReport (Ship { rudder=r}) = "Rudder " ++ rudderReport r ++ ", aye."
 roundShow = show . round
 
 
-showShip :: Ship -> String
-showShip (Ship { course = c, orCourse = oc, sails = s, rudder = r, sx = x, sy = y }) = "Ship: ("++ show x ++","++ show y++"), course "++ show c ++", ordered course "++show oc++", rudder " ++ rudderReport r
+showShip :: Ship -> Speed -> Heading -> String
+showShip (Ship { course = c, orCourse = oc, sails = s, rudder = r, sx = x, sy = y }) ws wh = "Ship: ("++ show x ++","++ show y++"), course "++ show c ++", ordered course "++show oc++", rudder " ++ rudderReport r ++ ", wind " ++ show wh ++ " at " ++ show ws
 
 -----------------------------
 ----- utility functions  ----
