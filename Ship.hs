@@ -87,7 +87,7 @@ tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = d
   return s''
 
 moveShip :: Speed -> Heading -> Ship -> Ship
-moveShip ws wh s@(Ship { sail = f, course = c, sx = x, sy = y }) = s { course = c', sx = x', sy = y' }
+moveShip ws wh s@(Ship { sail = f, course = c, sx = x, sy = y }) = s { course = normalize c', sx = x', sy = y' }
     where (c',ss) = f ws wh c  -- apply the sailing function
           x'      = x + ss * cos (comp2cart c')
           y'      = y + ss * sin (comp2cart c')
