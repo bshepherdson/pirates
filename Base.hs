@@ -167,6 +167,9 @@ namesMatch :: (String -> Bool) -> Poss a -> Poss a
 namesMatch p = filter (not . null . snd) . map (second (filter p))
 
 
+alternatives :: [String] -> String
+alternatives = intercalate ", " . concat . map snd
+
 -- given an input and a Poss of commands:
 -- * if there is a unique poss. that is a prefix of the input, returns:
 --     the Poss value, the matched portion, and the remainder of the string (leading whitespace trimmed)
@@ -174,9 +177,14 @@ tryParse :: String -> Poss a -> Parse (a, String, String)
 tryParse s cs = case namesMatch (`isPrefixOf` s) cs of
                   [(a,[x])] -> return (a, x, dropWhile isSpace $ drop (length x) s)
                   []      -> fail $ "Unknown term \"" ++ s ++ "\""
-                  xs      -> fail $ "Ambiguous command. Did you mean: "
-                             ++ (intercalate ", " . concat . map snd) xs
+                  xs      -> fail $ "Ambiguous command. Did you mean: " ++ alternatives xs
 
+matchShipName :: [Client] -> String -> Parse Client
+matchShipName cs s = case filter ((s `isInfixOf`) . map toLower . name . ship) of
+                       [c] -> return c
+                       []  -> fail $ "No ships match '" ++ s ++ "'."
+                       xs  -> fail $ "Ambiguous ship. Did you mean: " ++ alternatives xs
+                       
 
 maybeParse :: String -> Poss a -> Maybe a
 maybeParse s ps = case namesMatch (s `isPrefixOf`) ps of
