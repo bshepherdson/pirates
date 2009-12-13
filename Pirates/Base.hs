@@ -184,19 +184,23 @@ namesMatch p = filter (not . null . snd) . map (second (filter p))
 alternatives :: [(a,[String])] -> String
 alternatives = intercalate ", " . concat . map snd
 
+
+stripNewlines :: String -> String
+stripNewlines = filter (not . (`elem` "\n\r"))
+
 -- given an input and a Poss of commands:
 -- * if there is a unique poss. that is a prefix of the input, returns:
 --     the Poss value, the matched portion, and the remainder of the string (leading whitespace trimmed)
 tryParse :: String -> Poss a -> Parse (a, String, String)
 tryParse s cs = case namesMatch (`isPrefixOf` s) cs of
-                  [(a,[x])] -> return (a, x, dropWhile isSpace $ drop (length x) s)
-                  []      -> fail $ "Unknown term \"" ++ s ++ "\""
+                  [(a,[x])] -> return (a, x, stripNewlines $ dropWhile isSpace $ drop (length x) s)
+                  []      -> fail $ "Unknown term \"" ++ stripNewlines s ++ "\""
                   xs      -> fail $ "Ambiguous command. Did you mean: " ++ alternatives xs
 
 matchShipName :: [Client] -> String -> Parse Client
 matchShipName cs s = case filter ((s `isInfixOf`) . map toLower . (^.name) . (^.ship)) cs of
                        [c] -> return c
-                       []  -> fail $ "No ships match '" ++ s ++ "'."
+                       []  -> fail $ "No ships match '" ++ stripNewlines s ++ "'."
                        xs  -> fail $ "Ambiguous ship. Did you mean: " ++ intercalate ", " (map ((^.name) . (^.ship)) xs)
                        
 

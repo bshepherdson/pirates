@@ -238,7 +238,7 @@ serverLoop chan s tid c = do
                                             , chan_   = nc
                                             , reader_ = tid
                                             , writer_ = wid
-                                            , ship_   = tpFrigate
+                                            , ship_   = tpFrigate { name_ = name_ tpFrigate ++ show c }
                                             , watching_ = []
                                             , reporting_ = []
                                             , targeting_ = []
