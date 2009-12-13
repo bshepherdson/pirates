@@ -133,6 +133,7 @@ cmd_watch c cmd as = do
   cs     <- get clients
   target <- matchShipName cs as
   me     <- liftP $ findClient c
+  when (target == me) $ fail "Can't watch yourself."
 
   if target^.cid `elem` me^.watching 
     then liftP $ to c $ "Already watching " ++ target^.ship^.name

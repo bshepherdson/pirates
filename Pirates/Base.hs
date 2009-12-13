@@ -44,6 +44,9 @@ data Client = Client {
     , targeting_  :: ![ClientId] -- targeting C= reporting
     }
 
+instance Eq Client where
+  (Client { cid_ = x }) == (Client { cid_ = y }) = x == y
+
 --------------------------------------------------------------
 ----------------------- P monad --------------------------
 --------------------------------------------------------------
@@ -111,6 +114,8 @@ data Ship = Ship {
     , turnRate_     :: !Double
     }
 
+instance Eq Ship where
+  (Ship { name_ = x }) == (Ship { name_ = y }) = x == y
 
 -- data-accessor TH
 
