@@ -158,7 +158,7 @@ updateMatching p f xs = pre ++ f x' : xs'
     where (pre, (x':xs')) = break p xs
 
 updateClient :: ClientId -> (Client -> Client) -> P ()
-updateClient c f = undefined --modify clients $ updateMatching ((==c) . (^. cid)) f
+updateClient c f = modify clients $ updateMatching ((==c) . (^. cid)) f
 
 
 withShip :: ClientId -> (Ship -> Ship) -> P ()

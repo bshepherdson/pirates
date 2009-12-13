@@ -130,34 +130,36 @@ cmd_rudder c cmd as = do
 
 cmd_watch :: Command
 cmd_watch c cmd as = do
-  cs     <- liftP $ gets clients
+  cs     <- get clients
   target <- matchShipName cs as
   me     <- liftP $ findClient c
 
-  if c2 `elem` watching
-  liftP $ updateClient c $ \st -> st { watching = cid s : watching st }
-  liftP $ to c $ "Now watching 
+  if target^.cid `elem` me^.watching 
+    then liftP $ to c $ "Already watching " ++ target^.ship^.name
+    else do
+      liftP $ updateClient c $ watching ^: (target^.cid :)
+      liftP $ to c $ "Now watching " ++ target^.ship^.name
 
 
 
 
 cmd_report :: Command
-cmd_report = undefined
+cmd_report = error "cmd_report"
 
 cmd_target :: Command
-cmd_target = undefined
+cmd_target = error "cmd_target"
 
 cmd_watching :: Command
-cmd_watching = undefined
+cmd_watching = error "cmd_watching"
 
 cmd_reporting :: Command
-cmd_reporting = undefined
+cmd_reporting = error "cmd_reporting"
 
 cmd_targeting :: Command
-cmd_targeting = undefined
+cmd_targeting = error "cmd_targeting"
 
 cmd_visible :: Command
-cmd_visible = undefined
+cmd_visible = error "cmd_visible"
 
 ------------------------------------------------
 -------------- server functions ----------------
