@@ -63,6 +63,15 @@ commands = [
             -- ship control
             (cmd_turn     , ["turn","come"])
            ,(cmd_rudder   , ["rudder"])
+           -- targeting commands
+           ,(cmd_watch    , ["watch"])
+           ,(cmd_report   , ["report", "reports", "report on", "reports on"])
+           ,(cmd_target   , ["target"])
+           -- viewing the target lists
+           ,(cmd_visible  , ["ships in view", "visible", "list visible", "show visible"])
+           ,(cmd_watching , ["watching", "list watching", "show watching"])
+           ,(cmd_reporting, ["reporting", "list reporting", "show reporting"])
+           ,(cmd_targeting, ["targeting", "list targeting", "show targeting", "targets", "list targets", "show targets"])
            ]
 
 
@@ -119,6 +128,36 @@ cmd_rudder c cmd as = do
           r    = dir*rate
 
 
+cmd_watch :: Command
+cmd_watch c cmd as = do
+  cs     <- liftP $ gets clients
+  target <- matchShipName cs as
+  me     <- liftP $ findClient c
+
+  if c2 `elem` watching
+  liftP $ updateClient c $ \st -> st { watching = cid s : watching st }
+  liftP $ to c $ "Now watching 
+
+
+
+
+cmd_report :: Command
+cmd_report = undefined
+
+cmd_target :: Command
+cmd_target = undefined
+
+cmd_watching :: Command
+cmd_watching = undefined
+
+cmd_reporting :: Command
+cmd_reporting = undefined
+
+cmd_targeting :: Command
+cmd_targeting = undefined
+
+cmd_visible :: Command
+cmd_visible = undefined
 
 ------------------------------------------------
 -------------- server functions ----------------
