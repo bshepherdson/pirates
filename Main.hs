@@ -56,7 +56,9 @@ putDisconnect c chan = do
 -----------------------------------------
 
 commands :: Poss Command
-commands = [(cmd_turn     , ["turn","come"])
+commands = [
+            -- ship control
+            (cmd_turn     , ["turn","come"])
            ,(cmd_rudder   , ["rudder"])
            ]
 
@@ -64,14 +66,15 @@ commands = [(cmd_turn     , ["turn","come"])
 parser :: (ClientId,String) -> P ()
 parser (c,[]) = return ()  -- do nothing on empty string
 parser (c,s)  = case words (map toLower s) of
-                  []     -> return () -- do nothing again
-                  (w:ws) -> do
-                    x <- runParse (tryParse w commands >>= \f -> f c (w:ws))
+                  [] -> return () -- do nothing again
+                  _  -> do
+                    x <- runParse (tryParse s commands >>= \(f,cmd,as) -> f c cmd as)
                     case x of
                       Left e  -> to c $ "Error: " ++ e
                       Right _ -> return ()
 
 
+-- takes a default, possibilities, and the arguments
 parseArg :: a -> Poss a -> [String] -> a
 parseArg d p xs = maybe d id $ collapseMaybes $ map (flip maybeParse p) xs
 
@@ -84,15 +87,16 @@ rates = [(    1, ["soft","gentle","softly","gently","slow","slowly","light","sli
           
 
 cmd_turn :: Command
-cmd_turn c (cmd:as) = do
+cmd_turn c cmd as = do
   liftP $ turn c dir rate hdg absol
   s <- ship <$> liftP (findClient c)
   liftP $ to c $ turnReport s
     where absls = [(True , ["to"]), (False, ["by"])]
-          dir   = parseArg 0 dirs  as
-          rate  = parseArg 2 rates as
-          hdg   = maybe 0 id $ collapseMaybes $ (map maybeRead as :: [Maybe Int])
-          absol = parseArg (cmd=="turn") absls as
+          as'   = words as
+          dir   = parseArg 0 dirs  as'
+          rate  = parseArg 2 rates as'
+          hdg   = maybe 0 id $ collapseMaybes $ (map maybeRead as' :: [Maybe Int])
+          absol = parseArg (cmd=="turn") absls as'
 
 turn :: ClientId -> Int -> Rudder -> Int -> Bool -> P ()
 turn c d r h a = withShip c $ \s -> s { rudder  = d*r
@@ -103,11 +107,12 @@ turn c d r h a = withShip c $ \s -> s { rudder  = d*r
 
 
 cmd_rudder :: Command
-cmd_rudder c (cmd:as) = do
+cmd_rudder c cmd as = do
   liftP $ withShip c $ \s -> s { rudder = r, orCourse = Nothing }
   liftP $ to c $ "Rudder " ++ rudderReport r ++", aye Cap'n"
-    where dir  = parseArg 0 dirs  as
-          rate = parseArg 2 rates as
+    where as'  = words as
+          dir  = parseArg 0 dirs  as'
+          rate = parseArg 2 rates as'
           r    = dir*rate
 
 

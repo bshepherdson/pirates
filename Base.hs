@@ -11,6 +11,7 @@ import Control.Concurrent
 import Control.Concurrent.STM.TChan
 
 import Data.List
+import Data.Char (isSpace)
 import Data.Maybe
 import Control.Arrow
 import System.Exit
@@ -35,6 +36,9 @@ data Client = Client {
     , reader     :: !ThreadId
     , writer     :: !ThreadId
     , ship       :: Ship
+    , watching   :: ![ClientId]
+    , reporting  :: ![ClientId] -- reporting C= watching
+    , targeting  :: ![ClientId] -- targeting C= reporting
     }
 
 --------------------------------------------------------------
@@ -59,7 +63,7 @@ newtype Parse a = Parse (ErrorT String P a)
 
 runParse (Parse x) = runErrorT x
 
-type Command = ClientId -> [String] -> Parse ()
+type Command = ClientId -> String -> String -> Parse ()
 
 
 liftP :: P a -> Parse a
@@ -163,12 +167,15 @@ namesMatch :: (String -> Bool) -> Poss a -> Poss a
 namesMatch p = filter (not . null . snd) . map (second (filter p))
 
 
-tryParse :: String -> Poss a -> Parse a
-tryParse s cs = case namesMatch (s `isPrefixOf`) cs of
-                  [(a,_)] -> return a
+-- given an input and a Poss of commands:
+-- * if there is a unique poss. that is a prefix of the input, returns:
+--     the Poss value, the matched portion, and the remainder of the string (leading whitespace trimmed)
+tryParse :: String -> Poss a -> Parse (a, String, String)
+tryParse s cs = case namesMatch (`isPrefixOf` s) cs of
+                  [(a,[x])] -> return (a, x, dropWhile isSpace $ drop (length x) s)
                   []      -> fail $ "Unknown term \"" ++ s ++ "\""
-                  xs      -> fail $ "Ambiguous abbreviation. Did you mean: "
-                             ++ (unwords . concat . map snd) xs
+                  xs      -> fail $ "Ambiguous command. Did you mean: "
+                             ++ (intercalate ", " . concat . map snd) xs
 
 
 maybeParse :: String -> Poss a -> Maybe a
