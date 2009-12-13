@@ -25,8 +25,8 @@ import Data.List
 import Data.Char
 import Data.Maybe
 
-import Base
-import Ship
+import Pirates.Base
+import Pirates.Ship
 
 
 readerThread :: ClientId -> Handle -> MasterChannel -> IO ()

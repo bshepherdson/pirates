@@ -1,0 +1,15 @@
+Name:                pirates
+Version:             0.0.1
+Description:         Text-based pirate ship combat simulation
+License:             BSD3
+License-file:        LICENSE
+Author:              Braden Shepherdson
+Maintainer:          Braden.Shepherdson@gmail.com
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+
+Executable haq
+  Main-is:           Main.hs
+  Build-Depends:     base,mtl,data-accessor-template,data-accessor-mtl,parallel,containers,stm,network,random
+
+

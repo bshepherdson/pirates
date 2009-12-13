@@ -1,12 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Ship where
+module Pirates.Ship where
 
 import qualified Data.Map as M
 import Control.Arrow
 import Control.Monad
 
-import Base
+import Pirates.Base
 
 
 -- a starting ship

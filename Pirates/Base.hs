@@ -1,6 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, BangPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, BangPatterns, TemplateHaskell #-}
 
-module Base where
+module Pirates.Base where
 
 import System.IO
 import Control.Monad
@@ -42,8 +42,6 @@ data Client = Client {
     , reporting_  :: ![ClientId] -- reporting C= watching
     , targeting_  :: ![ClientId] -- targeting C= reporting
     }
-
-$( deriveAccessors ''Client )
 
 --------------------------------------------------------------
 ----------------------- P monad --------------------------
@@ -99,19 +97,18 @@ data TurnRate = Slow | Normal | Hard
   deriving (Read, Show)
 
 data Ship = Ship {
-      shipClass    :: !Class
-    , name         :: !String
-    , captain      :: !Captain
-    , course       :: !Heading
-    , orCourse     :: !(Maybe Heading)
-    , sails        :: !Sails
-    , sail         :: !SailFunc
-    , rudder       :: !Rudder
-    , sx           :: !Double
-    , sy           :: !Double
-    , turnRate     :: !Double
+      shipClass_    :: !Class
+    , name_         :: !String
+    , captain_      :: !Captain
+    , course_       :: !Heading
+    , orCourse_     :: !(Maybe Heading)
+    , sails_        :: !Sails
+    , sail_         :: !SailFunc
+    , rudder_       :: !Rudder
+    , sx_           :: !Double
+    , sy_           :: !Double
+    , turnRate_     :: !Double
     }
-
 
 ------------------------------------------
 ------- utility sending functions --------
@@ -194,4 +191,11 @@ collapseMaybes = listToMaybe . reverse . catMaybes
 
 fi :: (Integral a, Num b) => a -> b
 fi = fromIntegral
+
+
+
+-- data-accessor TH
+
+$( deriveAccessors ''Ship   )
+$( deriveAccessors ''Client )
 
