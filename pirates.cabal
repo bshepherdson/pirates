@@ -8,8 +8,8 @@ Maintainer:          Braden.Shepherdson@gmail.com
 Build-Type:          Simple
 Cabal-Version:       >=1.2
 
-Executable haq
+Executable pirates
   Main-is:           Main.hs
-  Build-Depends:     base,mtl,data-accessor-template,data-accessor-mtl,parallel,containers,stm,network,random
+  Build-Depends:     base,mtl,data-accessor-template,data-accessor-mtl,parallel,containers,stm,network,random,data-accessor
 
 
