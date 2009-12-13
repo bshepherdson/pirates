@@ -16,6 +16,8 @@ import Data.Maybe
 import Control.Arrow
 import System.Exit
 
+import Data.Accessor.Monad.MTL.State
+import Data.Accessor.Template
 
 type Synonyms   = [String]
 type Poss a = [(a,Synonyms)]
@@ -30,16 +32,18 @@ data Event = Message (ClientId,String)
            | Tick Int
 
 data Client = Client {
-      cid        :: !ClientId
-    , socket     :: !Handle
-    , chan       :: TChan String
-    , reader     :: !ThreadId
-    , writer     :: !ThreadId
-    , ship       :: Ship
-    , watching   :: ![ClientId]
-    , reporting  :: ![ClientId] -- reporting C= watching
-    , targeting  :: ![ClientId] -- targeting C= reporting
+      cid_        :: !ClientId
+    , socket_     :: !Handle
+    , chan_       :: TChan String
+    , reader_     :: !ThreadId
+    , writer_     :: !ThreadId
+    , ship_       :: Ship
+    , watching_   :: ![ClientId]
+    , reporting_  :: ![ClientId] -- reporting C= watching
+    , targeting_  :: ![ClientId] -- targeting C= reporting
     }
+
+$( deriveAccessors ''Client )
 
 --------------------------------------------------------------
 ----------------------- P monad --------------------------
