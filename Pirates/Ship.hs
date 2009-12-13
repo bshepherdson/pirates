@@ -13,17 +13,17 @@ import Pirates.Base
 
 tpFrigate :: Ship
 tpFrigate = Ship {
-              shipClass = 5
-            , name      = "Black Utopia"
-            , captain   = "Myron Scrant"
-            , course    = 120
-            , orCourse  = Nothing
-            , sails     = ssFrigate
-            , sail      = sLargeFastSquare
-            , rudder    = 0
-            , sx        = 0
-            , sy        = 0
-            , turnRate  = 30
+              shipClass_ = 5
+            , name_      = "Black Utopia"
+            , captain_   = "Myron Scrant"
+            , course_    = 120
+            , orCourse_  = Nothing
+            , sails_     = ssFrigate
+            , sail_      = sLargeFastSquare
+            , rudder_    = 0
+            , sx_        = 0
+            , sy_        = 0
+            , turnRate_  = 30
             }
 
 
@@ -75,19 +75,19 @@ furled ws wh sh | windDiff wh sh == 90  = (sh,0)
 -----------------------------------
 
 tickShip :: Speed -> Heading -> ClientId -> Ship -> P Ship
-tickShip ws wh cid s@(Ship { course = c, orCourse = oc, rudder = r, turnRate = dc }) = do
+tickShip ws wh cid s@(Ship { course_ = c, orCourse_ = oc, rudder_ = r, turnRate_ = dc }) = do
   let nc  = c + (fi r * dc / fi tickRate)
       (overshoot,oc') = case oc of
           Just x  -> (compare c x /= compare nc x || c == x, x)
           Nothing -> (False, 0)
   when overshoot $ to cid ("Steady on course " ++ roundShow oc' ++ ", Cap'n")
-  let s'  = if overshoot then s { course = oc', orCourse = Nothing, rudder = 0 } else s { course = nc }
+  let s'  = if overshoot then s { course_ = oc', orCourse_ = Nothing, rudder_ = 0 } else s { course_ = nc }
       s'' = moveShip ws wh s'
   to cid $ showShip s'' ws wh
   return s''
 
 moveShip :: Speed -> Heading -> Ship -> Ship
-moveShip ws wh s@(Ship { sail = f, course = c, sx = x, sy = y }) = s { course = normalize c', sx = x', sy = y' }
+moveShip ws wh s@(Ship { sail_ = f, course_ = c, sx_ = x, sy_ = y }) = s { course_ = normalize c', sx_ = x', sy_ = y' }
     where (c',ss) = f ws wh c  -- apply the sailing function
           x'      = x + ss * cos (comp2cart c')
           y'      = y + ss * sin (comp2cart c')
@@ -108,15 +108,15 @@ rudderReport _    = "ERROR: UNKNOWN"
 
 
 turnReport :: Ship -> String
-turnReport (Ship { rudder=r, orCourse=(Just c) }) = 
+turnReport (Ship { rudder_=r, orCourse_=(Just c) }) = 
     "Turn " ++ rudderReport r ++ " to " ++ show c ++ ", aye."
-turnReport (Ship { rudder=r}) = "Rudder " ++ rudderReport r ++ ", aye."
+turnReport (Ship { rudder_=r}) = "Rudder " ++ rudderReport r ++ ", aye."
 
 roundShow = show . round
 
 
 showShip :: Ship -> Speed -> Heading -> String
-showShip (Ship { course = c, orCourse = oc, sails = s, rudder = r, sx = x, sy = y }) ws wh = "Ship: ("++ show x ++","++ show y++"), course "++ show c ++", ordered course "++show oc++", rudder " ++ rudderReport r ++ ", wind " ++ show wh ++ " at " ++ show ws
+showShip (Ship { course_ = c, orCourse_ = oc, sails_ = s, rudder_ = r, sx_ = x, sy_ = y }) ws wh = "Ship: ("++ show x ++","++ show y++"), course "++ show c ++", ordered course "++show oc++", rudder " ++ rudderReport r ++ ", wind " ++ show wh ++ " at " ++ show ws
 
 -----------------------------
 ----- utility functions  ----

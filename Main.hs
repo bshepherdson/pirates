@@ -12,7 +12,7 @@ import Network
 
 import Control.Monad
 import Control.Monad.STM
-import Control.Monad.State
+import Control.Monad.State hiding (modify, get)
 import Control.Monad.Trans
 import Control.Monad.Error
 import Control.Applicative
@@ -27,6 +27,9 @@ import Data.Maybe
 
 import Pirates.Base
 import Pirates.Ship
+
+import Data.Accessor hiding ((%=),(%:))
+import Data.Accessor.Monad.MTL.State hiding (lift)
 
 
 readerThread :: ClientId -> Handle -> MasterChannel -> IO ()
@@ -89,7 +92,7 @@ rates = [(    1, ["soft","gentle","softly","gently","slow","slowly","light","sli
 cmd_turn :: Command
 cmd_turn c cmd as = do
   liftP $ turn c dir rate hdg absol
-  s <- ship <$> liftP (findClient c)
+  s <- (^. ship) <$> liftP (findClient c)
   liftP $ to c $ turnReport s
     where absls = [(True , ["to"]), (False, ["by"])]
           as'   = words as
@@ -99,16 +102,16 @@ cmd_turn c cmd as = do
           absol = parseArg (cmd=="turn") absls as'
 
 turn :: ClientId -> Int -> Rudder -> Int -> Bool -> P ()
-turn c d r h a = withShip c $ \s -> s { rudder  = d*r
-                                      , orCourse = if a 
-                                                   then Just $ fi h 
-                                                   else Just $ course s + (fi $ h * d )
+turn c d r h a = withShip c $ \s -> s { rudder_  = d*r
+                                      , orCourse_ = if a 
+                                                    then Just $ fi h 
+                                                    else Just $ course_ s + (fi $ h * d )
                                       }
 
 
 cmd_rudder :: Command
 cmd_rudder c cmd as = do
-  liftP $ withShip c $ \s -> s { rudder = r, orCourse = Nothing }
+  liftP $ withShip c $ (rudder ^= r) . (orCourse ^= Nothing)
   liftP $ to c $ "Rudder " ++ rudderReport r ++", aye Cap'n"
     where as'  = words as
           dir  = parseArg 0 dirs  as'
@@ -129,10 +132,10 @@ runP st (P a) = runStateT a st
 tick :: Int -> P ()
 tick x = do
     -- advance all ships by the right amount of movement
-    cs <- gets clients
-    (ws,wh) <- gets wind
-    cs' <- mapM (\c -> tickShip ws wh (cid c) (ship c) >>= \s -> return c { ship = s }) cs
-    modify $ \s -> s { clients = cs' }
+    cs <- get clients
+    (ws,wh) <- get wind
+    cs' <- mapM (\c -> tickShip ws wh (c ^. cid) (c ^. ship) >>= \s -> return c { ship_ = s }) cs
+    clients %= cs'
     tickWind
 
 tickWind :: P ()
@@ -145,24 +148,20 @@ loop chan = forever $ do
               e <- io $ atomically $ readTChan chan
               case e of
                 Message cs -> parser cs
-                NewClient c -> do
-                        st <- get
-                        let cs = clients st
-                        put $ st { clients = c:cs }
+                NewClient c -> clients %: (c:)
                 Disconnect c -> do
-                        st <- get
-                        let cs = clients st
-                        case break ((==c).cid) cs of
+                        cs <- get clients
+                        case break ((==c). (^. cid)) cs of
                           (_,[]) -> return () -- do nothing, client already gone
                           (pre,d:post) -> do
-                                  io $ killThread $ writer d
+                                  io $ killThread $ d ^. writer
                                   tid <- io $ myThreadId
-                                  if reader d == tid
+                                  if d ^. reader == tid
                                     then return () -- do nothing.
-                                    else io $ killThread $ reader d
-                                  put st { clients = pre ++ post }
-                                  toAll $ "System: Client Disconnected: " ++ show (cid d)
-                NewReader c t -> updateClient c $ \c -> c { reader = t }
+                                    else io $ killThread $ d ^. reader
+                                  clients %= pre ++ post
+                                  toAll $ "System: Client Disconnected: " ++ show (d ^. cid)
+                NewReader c t -> updateClient c $ reader ^= t
                 Tick x -> tick x
 
 
@@ -192,12 +191,15 @@ serverLoop chan s tid c = do
   putStrLn $ "New client! Assigning cid "++ show c
   wid <- forkIO $ writerThread c h nc chan
   atomically $ writeTChan chan $ NewClient (Client {
-                                              cid    = c
-                                            , socket = h
-                                            , chan   = nc
-                                            , reader = tid
-                                            , writer = wid
-                                            , ship   = tpFrigate
+                                              cid_    = c
+                                            , socket_ = h
+                                            , chan_   = nc
+                                            , reader_ = tid
+                                            , writer_ = wid
+                                            , ship_   = tpFrigate
+                                            , watching_ = []
+                                            , reporting_ = []
+                                            , targeting_ = []
                                             })
   rid <- forkIO $ readerThread c h chan
   atomically $ writeTChan chan (NewReader c rid)

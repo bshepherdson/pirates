@@ -5,7 +5,7 @@ module Pirates.Base where
 import System.IO
 import Control.Monad
 import Control.Monad.STM
-import Control.Monad.State
+import Control.Monad.State hiding (modify,get)
 import Control.Monad.Error
 import Control.Concurrent
 import Control.Concurrent.STM.TChan
@@ -16,7 +16,8 @@ import Data.Maybe
 import Control.Arrow
 import System.Exit
 
-import Data.Accessor.Monad.MTL.State
+import Data.Accessor
+import Data.Accessor.Monad.MTL.State hiding (lift)
 import Data.Accessor.Template
 
 type Synonyms   = [String]
@@ -48,9 +49,9 @@ data Client = Client {
 --------------------------------------------------------------
 
 
-data PState = PState { clients  :: [Client]
-                     , inChan   :: MasterChannel
-                     , wind     :: (Speed, Heading)
+data PState = PState { clients_  :: [Client]
+                     , inChan_   :: MasterChannel
+                     , wind_     :: (Speed, Heading)
                      }
 
 newtype P a = P (StateT PState IO a)
@@ -110,6 +111,13 @@ data Ship = Ship {
     , turnRate_     :: !Double
     }
 
+
+-- data-accessor TH
+
+$( deriveAccessors ''Ship   )
+$( deriveAccessors ''Client )
+$( deriveAccessors ''PState )
+
 ------------------------------------------
 ------- utility sending functions --------
 ------------------------------------------
@@ -118,16 +126,16 @@ io :: (MonadIO m) => IO a -> m a
 io = liftIO
 
 send :: String -> Client -> P ()
-send s c = io $ atomically $ writeTChan (chan c) s
+send s c = io $ atomically $ writeTChan (c ^. chan) s
 
 to :: ClientId -> String -> P ()
 to c s = findClient c >>= send s
 
 toAll :: String -> P ()
-toAll s = gets clients >>= mapM_ (send s)
+toAll s = get clients >>= mapM_ (send s)
 
 toAllBut :: ClientId -> String -> P ()
-toAllBut c s = gets clients >>= mapM_ (send s) . filter ((/=c).cid)
+toAllBut c s = get clients >>= mapM_ (send s) . filter ((/=c).(^. cid))
 
 
 
@@ -135,8 +143,8 @@ toAllBut c s = gets clients >>= mapM_ (send s) . filter ((/=c).cid)
 
 findClient :: ClientId -> P Client
 findClient c = do
-  cs <- gets clients
-  case find ((==c).cid) cs of
+  cs <- get clients
+  case find ((==c). (^. cid)) cs of
     Nothing -> do
       io $ putStrLn $ "The impossible just happened: ClientId " ++ show c ++ " does not exist."
       io $ exitWith (ExitFailure 1)
@@ -150,11 +158,11 @@ updateMatching p f xs = pre ++ f x' : xs'
     where (pre, (x':xs')) = break p xs
 
 updateClient :: ClientId -> (Client -> Client) -> P ()
-updateClient c f = modify (\st -> st { clients = updateMatching ((==c).cid) f (clients st) })
+updateClient c f = undefined --modify clients $ updateMatching ((==c) . (^. cid)) f
 
 
 withShip :: ClientId -> (Ship -> Ship) -> P ()
-withShip cid f = updateClient cid (\c -> c { ship = f (ship c) })
+withShip cid f = updateClient cid (ship ^: f)
 
 
 maybeRead :: (Read a) => String -> Maybe a
@@ -192,10 +200,4 @@ collapseMaybes = listToMaybe . reverse . catMaybes
 fi :: (Integral a, Num b) => a -> b
 fi = fromIntegral
 
-
-
--- data-accessor TH
-
-$( deriveAccessors ''Ship   )
-$( deriveAccessors ''Client )
 
