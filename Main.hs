@@ -128,36 +128,41 @@ cmd_rudder c cmd as = do
           r    = dir*rate
 
 
-cmd_watch :: Command
-cmd_watch c cmd as = do
+addToList :: String -> String -> Accessor Client [ClientId] -> Command
+addToList job jobbing acc c cmd as = do
   cs     <- get clients
   target <- matchShipName cs as
   me     <- liftP $ findClient c
-  when (target == me) $ fail "Can't watch yourself."
+  when (target == me) $ fail $ "Can't " ++ job ++ " yourself."
 
-  if target^.cid `elem` me^.watching 
-    then liftP $ to c $ "Already watching " ++ target^.ship^.name
+  if target^.cid `elem` me^.acc
+    then liftP $ to c $ "Already " ++ jobbing ++" " ++ target^.ship^.name
     else do
-      liftP $ updateClient c $ watching ^: (target^.cid :)
-      liftP $ to c $ "Now watching " ++ target^.ship^.name
+      liftP $ updateClient c $ acc ^: (target^.cid :)
+      liftP $ to c $ "Now " ++ jobbing ++ " " ++ target^.ship^.name
+
+
+cmd_watch, cmd_report, cmd_target :: Command
+cmd_watch  = addToList "watch" "watching" watching
+cmd_report = addToList "report on" "reporting on" reporting
+cmd_target = addToList "target" "targeting" targeting
 
 
 
+displayList :: String -> Accessor Client [ClientId] -> Command
+displayList jobbing acc c cmd as = do
+  me <- liftP $ findClient c
+  let s = jobbing ++ " Vessels"
+  liftP $ to c s
+  liftP $ to c $ map (const '=') s
+  liftP $ forM_ (me ^. acc) $ \x -> findClient x >>= \sh -> to c (sh ^. ship ^. name)
 
-cmd_report :: Command
-cmd_report = error "cmd_report"
 
-cmd_target :: Command
-cmd_target = error "cmd_target"
+cmd_watching, cmd_reporting, cmd_targeting :: Command
+cmd_watching  = displayList "Watched" watching
+cmd_reporting = displayList "Reported" reporting
+cmd_targeting = displayList "Targeted" targeting
 
-cmd_watching :: Command
-cmd_watching = error "cmd_watching"
-
-cmd_reporting :: Command
-cmd_reporting = error "cmd_reporting"
-
-cmd_targeting :: Command
-cmd_targeting = error "cmd_targeting"
 
 cmd_visible :: Command
 cmd_visible = error "cmd_visible"
